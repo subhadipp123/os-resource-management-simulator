@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -23,16 +24,38 @@ struct Process
 
     Process()
         : pid(0), name("Unknown"),
-          priority(0), state(ProcessState::New) //default
+          priority(0), state(ProcessState::New)
     {
     }
 
     Process(int id, string processName, int p, ProcessState s)
         : pid(id), name(processName),
-          priority(p), state(s) // initializer list
+          priority(p), state(s)
     {
     }
 };
+
+// Strict integer input function
+bool readInteger(const string& prompt, int& value)
+{
+    string input;
+    stringstream ss;
+
+    cout << prompt;
+    getline(cin, input);
+
+    ss.str(input);
+
+    if (!(ss >> value))
+    {
+        return false;
+    }
+
+    // Check for any extra non-whitespace characters
+    ss >> ws;
+
+    return ss.eof();
+}
 
 string getStateName(ProcessState state)
 {
@@ -57,31 +80,104 @@ void displayProcess(const Process& p)
          << endl;
 }
 
-int main()
+void createProcesses(vector<Process>& processes, int& nextPID)
 {
-    vector<Process> processes;
+    int count;
 
-    processes.push_back(
-        Process(101, "Chrome", 2, ProcessState::Ready)
-    );
+    while (true)
+    {
+        if (readInteger(
+                "How many processes do you want to create? ", count)
+            && count >= 1 && count <= 100)
+        {
+            break;
+        }
 
-    processes.push_back(
-        Process(102, "Firefox", 1, ProcessState::Running)
-    );
+        cout << "Invalid input! Enter a whole number between 1 and 100.\n";
+    }
 
-    processes.push_back(
-        Process(103, "VS Code", 3, ProcessState::Waiting)
-    );
+    for (int i = 0; i < count; i++)
+    {
+        string name;
+        int priority;
 
-    cout << "PROCESS TABLE" << endl;
-    cout << "-----------------------------" << endl;
+        cout << "\nEnter name for Process " << i + 1 << ": ";
+        getline(cin, name);
+
+        while (name.empty())
+        {
+            cout << "Name cannot be empty. Enter again: ";
+            getline(cin, name);
+        }
+
+        while (true)
+        {
+            if (readInteger("Enter priority (1-10): ", priority)
+                && priority >= 1 && priority <= 10)
+            {
+                break;
+            }
+
+            cout << "Invalid priority! Enter a whole number between 1 and 10.\n";
+        }
+
+        processes.push_back(
+            Process(nextPID++, name, priority, ProcessState::New)
+        );
+
+        cout << "Process created successfully!\n";
+    }
+}
+
+void displayProcessTable(const vector<Process>& processes)
+{
+    cout << "\n========== PROCESS TABLE ==========\n";
 
     for (const Process& p : processes)
     {
         displayProcess(p);
     }
 
-    cout << "\nTotal processes: " << processes.size() << endl;
+    cout << "===================================\n";
+    cout << "Total processes: " << processes.size() << endl;
+}
+
+void searchProcessByPID(const vector<Process>& processes)
+{
+    int searchPID;
+
+    if (!readInteger("\nEnter PID to search: ", searchPID))
+    {
+        cout << "Invalid PID! Enter a whole number.\n";
+        return;
+    }
+
+    for (const Process& p : processes)
+    {
+        if (p.pid == searchPID)
+        {
+            cout << "\nProcess found!\n";
+            displayProcess(p);
+            return;
+        }
+    }
+
+    cout << "Process with PID " << searchPID << " not found.\n";
+}
+
+int main()
+{
+    vector<Process> processes;
+    int nextPID = 1;
+
+    cout << "OS RESOURCE MANAGEMENT SIMULATOR\n";
+    cout << "================================\n";
+
+    createProcesses(processes, nextPID);
+
+    displayProcessTable(processes);
+
+    searchProcessByPID(processes);
 
     return 0;
 }
