@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <limits>
 #include "menu.h"
@@ -17,6 +16,11 @@ int main()
 
         if (!(cin >> choice))
         {
+            if (cin.eof())
+            {
+                break;
+            }
+
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
@@ -25,6 +29,9 @@ int main()
         }
         else
         {
+            // Remove the newline left by cin >> choice.
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
             handleChoice(choice);
         }
 

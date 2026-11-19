@@ -1,6 +1,6 @@
-
 #include <iostream>
 #include "menu.h"
+#include "process/ProcessManagementUI.h"
 
 using namespace std;
 
@@ -25,7 +25,7 @@ void handleChoice(int choice)
     switch (choice)
     {
         case 1:
-            cout << "Process Management selected.\n";
+            processManagementMenu();
             break;
 
         case 2:
