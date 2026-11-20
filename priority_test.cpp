@@ -11,10 +11,10 @@ int main()
 {
     vector<SchedulingProcess> processes =
     {
-       {1, 0, 8, 3},
-       {2, 2, 3, 1},
-       {3, 3, 2, 2},
-       {4, 4, 1, 4}
+        {1, 0, 8, 3},
+        {2, 2, 3, 1},
+        {3, 3, 2, 2},
+        {4, 4, 1, 4}
     };
 
     PriorityScheduler1 scheduler;
@@ -51,11 +51,23 @@ int main()
 
     for (const Result& result : results)
     {
+        // Find the original process by PID.
+        int priority = 0;
+
+        for (const SchedulingProcess& process : processes)
+        {
+            if (process.pid == result.pid)
+            {
+                priority = process.priority;
+                break;
+            }
+        }
+
         cout << left
              << setw(8) << result.pid
              << setw(10) << result.arrivalTime
              << setw(10) << result.burstTime
-             << setw(10) << processes[result.pid - 1].priority
+             << setw(10) << priority
              << setw(10) << result.startTime
              << setw(10) << result.completionTime
              << setw(10) << result.turnaroundTime
@@ -82,6 +94,23 @@ int main()
 
         cout << "Average Response Time: "
              << totalResponseTime / count << '\n';
+    }
+
+    // Display execution timeline.
+    cout << "\nExecution Timeline:\n";
+
+    for (const ExecutionSegment& segment :
+         outcome.executionTimeline)
+    {
+        if (segment.pid == 0)
+            cout << "IDLE: ";
+        else
+            cout << "P" << segment.pid << ": ";
+
+        cout << segment.startTime
+             << " - "
+             << segment.endTime
+             << '\n';
     }
 
     cout << "\n===============================================\n";

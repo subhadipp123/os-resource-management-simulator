@@ -1,5 +1,7 @@
+
 #include <iostream>
 #include <limits>
+
 #include "menu.h"
 
 using namespace std;
@@ -22,20 +24,28 @@ int main()
             }
 
             cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+            cin.ignore(
+                numeric_limits<streamsize>::max(),
+                '\n'
+            );
 
             cout << "Invalid input! Please enter a number.\n";
+
             choice = 0;
         }
         else
         {
             // Remove the newline left by cin >> choice.
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cin.ignore(
+                numeric_limits<streamsize>::max(),
+                '\n'
+            );
 
             handleChoice(choice);
         }
 
-    } while (choice != 6);
+    } while (choice != 3);
 
     return 0;
 }

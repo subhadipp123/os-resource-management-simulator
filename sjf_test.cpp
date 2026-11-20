@@ -11,7 +11,10 @@ int main()
 {
     vector<SchedulingProcess> processes =
     {
-        // Empty input test. Replace with process data for other tests.
+        {1, 0, 7, 0},
+        {2, 2, 4, 0},
+        {3, 4, 2, 0},
+        {4, 5, 1, 0}
     };
 
     SJFScheduler scheduler;
@@ -20,7 +23,8 @@ int main()
 
     if (!outcome.isValid)
     {
-        cout << "Scheduling error: " << outcome.errorMessage << '\n';
+        cout << "Scheduling error: "
+             << outcome.errorMessage << '\n';
         return 1;
     }
 
@@ -75,6 +79,23 @@ int main()
 
         cout << "Average Response Time: "
              << totalResponseTime / count << '\n';
+    }
+
+    // Display execution timeline.
+    cout << "\nExecution Timeline:\n";
+
+    for (const ExecutionSegment& segment :
+         outcome.executionTimeline)
+    {
+        if (segment.pid == 0)
+            cout << "IDLE: ";
+        else
+            cout << "P" << segment.pid << ": ";
+
+        cout << segment.startTime
+             << " - "
+             << segment.endTime
+             << '\n';
     }
 
     cout << "\n====================================\n";

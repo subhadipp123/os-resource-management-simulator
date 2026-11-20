@@ -11,9 +11,9 @@ int main()
 {
     vector<SchedulingProcess> processes =
     {
-        {1, 2, 4},
-        {2, 5, 3},
-        {3, 6, 2}
+        {1, 2, 4, 0},
+        {2, 5, 3, 0},
+        {3, 6, 2, 0}
     };
 
     FCFSScheduler scheduler;
@@ -22,7 +22,8 @@ int main()
 
     if (!outcome.isValid)
     {
-        cout << "Scheduling error: " << outcome.errorMessage << '\n';
+        cout << "Scheduling error: "
+             << outcome.errorMessage << '\n';
         return 1;
     }
 
@@ -77,6 +78,23 @@ int main()
 
         cout << "Average Response Time: "
              << totalResponseTime / count << '\n';
+    }
+
+    // Display execution timeline.
+    cout << "\nExecution Timeline:\n";
+
+    for (const ExecutionSegment& segment :
+         outcome.executionTimeline)
+    {
+        if (segment.pid == 0)
+            cout << "IDLE: ";
+        else
+            cout << "P" << segment.pid << ": ";
+
+        cout << segment.startTime
+             << " - "
+             << segment.endTime
+             << '\n';
     }
 
     cout << "\n=====================================\n";

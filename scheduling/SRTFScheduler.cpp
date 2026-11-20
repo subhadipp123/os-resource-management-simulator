@@ -1,3 +1,4 @@
+
 #include <algorithm>
 #include <limits>
 #include <vector>
@@ -7,15 +8,39 @@
 
 using namespace std;
 
+// Add an execution segment.
+// Merge adjacent segments belonging to the same process.
+static void addExecutionSegment(
+    vector<ExecutionSegment>& timeline,
+    int pid,
+    int startTime,
+    int endTime)
+{
+    if (!timeline.empty() &&
+        timeline.back().pid == pid &&
+        timeline.back().endTime == startTime)
+    {
+        timeline.back().endTime = endTime;
+    }
+    else
+    {
+        timeline.push_back({
+            pid,
+            startTime,
+            endTime
+        });
+    }
+}
+
 SchedulingOutcome SRTFScheduler::schedule(
     const vector<SchedulingProcess>& processes)
 {
-    // Validate input before running the scheduling algorithm.
+    // Validate input before scheduling.
     ValidationResult validation = validateProcesses(processes);
 
     if (!validation.isValid)
     {
-        return {false, validation.errorMessage, {}};
+        return {false, validation.errorMessage, {}, {}};
     }
 
     int n = static_cast<int>(processes.size());
@@ -30,6 +55,7 @@ SchedulingOutcome SRTFScheduler::schedule(
     }
 
     vector<Result> results;
+    vector<ExecutionSegment> executionTimeline;
 
     int currentTime = 0;
     int completedCount = 0;
@@ -39,7 +65,7 @@ SchedulingOutcome SRTFScheduler::schedule(
         int selectedIndex = -1;
 
         // Select the arrived process with the shortest remaining time.
-        // Ties are broken by earlier arrival time, then input order.
+        // Ties: earlier arrival time, then original input order.
         for (int i = 0; i < n; i++)
         {
             if (!completed[i] &&
@@ -56,7 +82,7 @@ SchedulingOutcome SRTFScheduler::schedule(
             }
         }
 
-        // If no process is ready, jump to the next arrival time.
+        // If no process is ready, advance to the next arrival.
         if (selectedIndex == -1)
         {
             int nextArrival = numeric_limits<int>::max();
@@ -71,6 +97,14 @@ SchedulingOutcome SRTFScheduler::schedule(
                     );
                 }
             }
+
+            // Record CPU idle time.
+            addExecutionSegment(
+                executionTimeline,
+                0,
+                currentTime,
+                nextArrival
+            );
 
             currentTime = nextArrival;
             continue;
@@ -108,8 +142,18 @@ SchedulingOutcome SRTFScheduler::schedule(
             );
         }
 
+        int executionStart = currentTime;
+
         remainingTime[selectedIndex] -= executionTime;
         currentTime += executionTime;
+
+        // Record this CPU execution interval.
+        addExecutionSegment(
+            executionTimeline,
+            processes[selectedIndex].pid,
+            executionStart,
+            currentTime
+        );
 
         // Check whether the process has completed.
         if (remainingTime[selectedIndex] == 0)
@@ -143,5 +187,10 @@ SchedulingOutcome SRTFScheduler::schedule(
         }
     }
 
-    return {true, "", results};
+    return {
+        true,
+        "",
+        results,
+        executionTimeline
+    };
 }

@@ -1,3 +1,4 @@
+
 #include <limits>
 #include <vector>
 
@@ -14,13 +15,14 @@ SchedulingOutcome PriorityScheduler1::schedule(
 
     if (!validation.isValid)
     {
-        return {false, validation.errorMessage, {}};
+        return {false, validation.errorMessage, {}, {}};
     }
 
     int n = static_cast<int>(processes.size());
 
     vector<bool> completed(n, false);
     vector<Result> results;
+    vector<ExecutionSegment> executionTimeline;
 
     int currentTime = 0;
     int completedCount = 0;
@@ -65,6 +67,16 @@ SchedulingOutcome PriorityScheduler1::schedule(
                 }
             }
 
+            // Record CPU idle time.
+            if (nextArrival > currentTime)
+            {
+                executionTimeline.push_back({
+                    0,
+                    currentTime,
+                    nextArrival
+                });
+            }
+
             currentTime = nextArrival;
             continue;
         }
@@ -92,6 +104,13 @@ SchedulingOutcome PriorityScheduler1::schedule(
         result.responseTime =
             result.startTime - result.arrivalTime;
 
+        // Record the complete execution interval.
+        executionTimeline.push_back({
+            process.pid,
+            result.startTime,
+            result.completionTime
+        });
+
         currentTime = result.completionTime;
 
         results.push_back(result);
@@ -100,5 +119,10 @@ SchedulingOutcome PriorityScheduler1::schedule(
         completedCount++;
     }
 
-    return {true, "", results};
+    return {
+        true,
+        "",
+        results,
+        executionTimeline
+    };
 }

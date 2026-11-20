@@ -1,113 +1,60 @@
 # OS Resource Management Simulator
 
-A modular, C++20-based Operating System Resource Management Simulator that demonstrates how operating systems manage processes, CPU scheduling, memory allocation, virtual memory, deadlocks, and synchronization.
+A modular, interactive **Operating System Resource Management Simulator** built using **C++20**. The project demonstrates core operating system concepts through process management and CPU scheduling algorithms.
 
-The project provides an interactive environment for experimenting with operating system algorithms, evaluating their performance, and understanding resource-management strategies through simulation.
+The simulator allows users to create and manage processes, execute scheduling algorithms, and analyze scheduling performance through execution timelines and Gantt charts.
 
-## Overview
-
-Operating systems coordinate multiple processes while managing limited resources such as CPU time, physical memory, and shared resources.
-
-This simulator models these core responsibilities through independent modules, allowing users to execute different algorithms, compare their behaviour, and analyze performance metrics.
-
-## Key Features
-
-- **Process Management:** Create, search, manage, and terminate processes with unique process IDs and validated state transitions.
-- **CPU Scheduling:** Execute and compare multiple CPU scheduling algorithms.
-- **Memory Management:** Simulate memory allocation strategies and analyze fragmentation.
-- **Virtual Memory:** Implement page replacement algorithms and track page faults and hits.
-- **Deadlock Management:** Analyze safe states and resource allocation using Banker's Algorithm.
-- **Concurrency and Synchronization:** Demonstrate thread synchronization and shared-resource management.
-- **Performance Analysis:** Calculate algorithmic performance metrics and compare execution results.
-- **Data Export:** Export simulation results in CSV format for further analysis.
-
-## Modules and Algorithms
+## Implemented Modules
 
 ### 1. Process Management
 
-Simulates the process lifecycle and maintains process information.
+Simulates basic process lifecycle management.
 
-- Process creation and termination
-- Automatic PID assignment
-- Process states:
-  - New
-  - Ready
-  - Running
-  - Waiting
-  - Terminated
-- Process searching and state-transition validation
-- Process information management
+**Features:**
+- Create processes with automatically assigned PIDs
+- Display all processes
+- Search processes by PID
+- Change process states
+- Terminate processes
+- Validate process state transitions
+
+**Supported Process States:**
+- New
+- Ready
+- Running
+- Waiting
+- Terminated
 
 ### 2. CPU Scheduling
 
-Implements and compares CPU scheduling algorithms:
+Implements five CPU scheduling algorithms.
 
-| Algorithm | Description |
-|---|---|
-| FCFS | First Come First Serve |
-| SJF | Shortest Job First |
-| SRTF | Shortest Remaining Time First |
-| Priority Scheduling | Executes processes according to priority |
-| Round Robin | Allocates CPU time using a time quantum |
+| Algorithm | Type | Description |
+|---|---|---|
+| FCFS | Non-preemptive | First Come First Serve |
+| SJF | Non-preemptive | Shortest Job First |
+| SRTF | Preemptive | Shortest Remaining Time First |
+| Priority Scheduling | Non-preemptive | Scheduling based on process priority |
+| Priority Scheduling | Preemptive | Higher-priority processes can preempt running processes |
+
+**Scheduling Features:**
+- Process arrival and burst time input
+- Process priority input where required
+- CPU idle-time handling
+- Process execution timeline
+- Gantt chart generation
+- Scheduling result calculation
 
 **Performance Metrics:**
-- Average Waiting Time
+- Completion Time (CT)
+- Turnaround Time (TAT)
+- Waiting Time (WT)
+- Response Time (RT)
 - Average Turnaround Time
+- Average Waiting Time
 - Average Response Time
-- Completion Time
-- CPU Utilization
-- Throughput
 
-### 3. Memory Management
-
-Simulates memory allocation using:
-
-- First Fit
-- Best Fit
-- Worst Fit
-
-**Performance Analysis:**
-- Memory utilization
-- Internal fragmentation
-- External fragmentation
-- Allocation success and failure
-
-### 4. Virtual Memory and Page Replacement
-
-Simulates virtual memory using page-reference sequences and configurable frame counts.
-
-**Algorithms:**
-- FIFO (First In First Out)
-- LRU (Least Recently Used)
-- Optimal Page Replacement
-
-**Performance Metrics:**
-- Total Page Faults
-- Total Page Hits
-- Page Fault Ratio
-- Page Hit Ratio
-
-### 5. Deadlock Management
-
-Demonstrates deadlock avoidance and resource allocation concepts.
-
-- Resource Allocation
-- Available, Allocated, and Maximum resource tracking
-- Banker's Algorithm
-- Safe and Unsafe State Detection
-- Safe Sequence Generation
-- Resource Request Validation
-
-### 6. Concurrency and Synchronization
-
-Demonstrates synchronization challenges in concurrent execution.
-
-- Multithreading using C++
-- Mutex-based synchronization
-- Semaphore-based synchronization
-- Critical Section Management
-- Race Condition Demonstrations
-- Producer-Consumer Problem
+**Priority Convention:** A lower numerical value represents a higher priority.
 
 ## Technology Stack
 
@@ -115,80 +62,64 @@ Demonstrates synchronization challenges in concurrent execution.
 |---|---|
 | C++20 | Core programming language |
 | STL | Data structures and algorithms |
-| OOP | Modular and maintainable architecture |
-| C++ Threads | Concurrent execution |
-| Mutexes and Semaphores | Synchronization |
-| Git and GitHub | Version control |
-| CSV | Simulation result export |
+| OOP | Modular software design |
+| GCC / MinGW | Compilation |
+| Git | Version control |
+| GitHub | Source code hosting |
+| Visual Studio Code | Development environment |
 
-## Project Architecture
-
-The application follows a modular architecture with separate components for process management, scheduling, memory management, virtual memory, deadlock handling, and synchronization.
+## Project Structure
 
 ```text
 OS-Resource-Management-Simulator/
 │
-├── src/
-│   ├── main.cpp
-│   ├── menu/
-│   ├── process/
-│   ├── scheduling/
-│   ├── memory/
-│   ├── virtual_memory/
-│   ├── deadlock/
-│   ├── synchronization/
-│   └── benchmarking/
+├── main.cpp
+├── menu.cpp
+├── menu.h
 │
-├── include/
-├── tests/
-├── benchmarks/
+├── process/
+│   ├── Process.h
+│   ├── Process.cpp
+│   ├── ProcessManager.h
+│   ├── ProcessManager.cpp
+│   ├── ProcessManagementUI.h
+│   └── ProcessManagementUI.cpp
+│
+├── scheduling/
+│   ├── SchedulingProcess.h
+│   ├── SchedulingOutcome.h
+│   ├── SchedulingValidator.h
+│   ├── SchedulingValidator.cpp
+│   ├── FCFSScheduler.h
+│   ├── FCFSScheduler.cpp
+│   ├── SJFScheduler.h
+│   ├── SJFScheduler.cpp
+│   ├── SRTFScheduler.h
+│   ├── SRTFScheduler.cpp
+│   ├── PriorityScheduler1.h
+│   ├── PriorityScheduler1.cpp
+│   ├── PreemptivePriorityScheduler2.h
+│   ├── PreemptivePriorityScheduler2.cpp
+│   ├── GanttChart.h
+│   ├── GanttChart.cpp
+│   ├── CPUSchedulingUI.h
+│   └── CPUSchedulingUI.cpp
+│
 ├── output/
 ├── screenshots/
-│
-├── CMakeLists.txt
 ├── .gitignore
 └── README.md
 ```
-
-*Directory structure shown as the intended final organization.*
-
-## Performance Analysis
-
-The simulator evaluates algorithm behaviour using consistent input workloads.
-
-Examples include:
-
-- Comparing CPU scheduling algorithms using identical process workloads.
-- Evaluating page replacement algorithms using identical reference strings and frame counts.
-- Comparing memory allocation strategies using identical memory configurations.
-- Measuring execution time for selected simulation workloads.
-
-Results can be exported as CSV files for additional analysis and visualization.
-
-## Testing
-
-The project includes tests for individual modules and important edge cases.
-
-Testing covers:
-
-- Process creation and PID uniqueness
-- Invalid process inputs
-- Valid and invalid process-state transitions
-- CPU scheduling calculations
-- Memory allocation and fragmentation
-- Page replacement behaviour
-- Deadlock safety checks
-- Synchronization correctness
-- Boundary conditions and invalid inputs
 
 ## Getting Started
 
 ### Prerequisites
 
-- C++20-compatible compiler (GCC 11+ recommended)
-- CMake 3.20+
+- Windows 10 or Windows 11
+- GCC compiler with C++20 support
+- MinGW-w64
 - Visual Studio Code or another C++ IDE
-- Git
+- PowerShell
 
 ### Clone the Repository
 
@@ -198,51 +129,68 @@ git clone https://github.com/subhadipp123/os-resource-management-simulator.git
 cd os-resource-management-simulator
 ```
 
-### Build the Project
+### Compile the Project
+
+Run the following command from the project root directory:
 
 ```bash
-cmake -S . -B build
-cmake --build build
+g++ -std=c++20 -Wall -Wextra -pedantic main.cpp menu.cpp process/Process.cpp process/ProcessManager.cpp process/ProcessManagementUI.cpp scheduling/FCFSScheduler.cpp scheduling/SJFScheduler.cpp scheduling/SRTFScheduler.cpp scheduling/PriorityScheduler1.cpp scheduling/PreemptivePriorityScheduler2.cpp scheduling/SchedulingValidator.cpp scheduling/GanttChart.cpp scheduling/CPUSchedulingUI.cpp -o output/simulator.exe
 ```
 
 ### Run the Simulator
 
-Run the generated executable from the build directory. The executable name and exact path depend on the configured build system and operating system.
+```powershell
+.\output\simulator.exe
+```
 
-## Learning Objectives
+## Testing
 
-This project demonstrates practical applications of:
+The implemented modules have been tested through individual algorithm tests and integrated menu-based execution.
 
-- Operating System fundamentals
-- Process lifecycle and process control
-- CPU scheduling algorithms
-- Memory allocation techniques
-- Virtual memory and page replacement
-- Deadlock avoidance
-- Multithreading and synchronization
-- Object-Oriented Programming
-- Data structures and algorithm analysis
-- Software modularity and testing
+Testing includes:
+
+- Process creation and automatic PID assignment
+- Process searching and termination
+- Valid and invalid process-state transitions
+- CPU scheduling with different arrival and burst times
+- Processes arriving simultaneously
+- CPU idle intervals
+- Preemptive and non-preemptive scheduling
+- Priority-based scheduling
+- Scheduling metric calculations
+- Gantt chart generation
 
 ## Future Enhancements
 
-Potential extensions include:
+The following modules are planned but are not currently implemented:
 
-- Interactive Gantt chart visualization
-- Graphical performance dashboards
-- More scheduling and memory-management algorithms
-- Large-scale configurable workloads
-- Advanced benchmark reports
-- Additional operating system simulation scenarios
+- Memory Management
+  - First Fit
+  - Best Fit
+  - Worst Fit
+- Virtual Memory and Page Replacement
+  - FIFO
+  - LRU
+  - Optimal
+- Deadlock Management
+  - Banker's Algorithm
+  - Safe-state detection
+- Additional performance analysis and benchmarking
+
+## Learning Objectives
+
+This project explores practical applications of:
+
+- Operating System process management
+- CPU scheduling algorithms
+- Preemptive and non-preemptive scheduling
+- Process state transitions
+- Data structures and algorithms
+- C++ modular programming
+- Software design and testing
 
 ## Author
 
 **Subhadip Pradhan**
 
-B.Tech Computer Science and Engineering
-
 GitHub: [subhadipp123](https://github.com/subhadipp123)
-
----
-
-**Note:** This is an educational operating system simulator. It models operating system concepts and algorithms; it does not modify or replace the host operating system's kernel or actual process scheduler.

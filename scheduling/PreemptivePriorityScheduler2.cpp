@@ -8,6 +8,30 @@
 
 using namespace std;
 
+// Record an execution segment.
+// Merge adjacent segments of the same process.
+static void addExecutionSegment(
+    vector<ExecutionSegment>& timeline,
+    int pid,
+    int startTime,
+    int endTime)
+{
+    if (!timeline.empty() &&
+        timeline.back().pid == pid &&
+        timeline.back().endTime == startTime)
+    {
+        timeline.back().endTime = endTime;
+    }
+    else
+    {
+        timeline.push_back({
+            pid,
+            startTime,
+            endTime
+        });
+    }
+}
+
 SchedulingOutcome PreemptivePriorityScheduler2::schedule(
     const vector<SchedulingProcess>& processes)
 {
@@ -16,7 +40,7 @@ SchedulingOutcome PreemptivePriorityScheduler2::schedule(
 
     if (!validation.isValid)
     {
-        return {false, validation.errorMessage, {}};
+        return {false, validation.errorMessage, {}, {}};
     }
 
     int n = static_cast<int>(processes.size());
@@ -31,6 +55,7 @@ SchedulingOutcome PreemptivePriorityScheduler2::schedule(
     }
 
     vector<Result> results;
+    vector<ExecutionSegment> executionTimeline;
 
     int currentTime = 0;
     int completedCount = 0;
@@ -75,6 +100,14 @@ SchedulingOutcome PreemptivePriorityScheduler2::schedule(
                 }
             }
 
+            // Record CPU idle interval.
+            addExecutionSegment(
+                executionTimeline,
+                0,
+                currentTime,
+                nextArrival
+            );
+
             currentTime = nextArrival;
             continue;
         }
@@ -85,7 +118,7 @@ SchedulingOutcome PreemptivePriorityScheduler2::schedule(
             firstStartTime[selectedIndex] = currentTime;
         }
 
-        // Find the next arrival that can preempt the current process.
+        // Find the next arrival with strictly higher priority.
         int nextHigherPriorityArrival =
             numeric_limits<int>::max();
 
@@ -115,8 +148,18 @@ SchedulingOutcome PreemptivePriorityScheduler2::schedule(
             );
         }
 
+        int executionStart = currentTime;
+
         remainingTime[selectedIndex] -= executionTime;
         currentTime += executionTime;
+
+        // Record this execution interval.
+        addExecutionSegment(
+            executionTimeline,
+            processes[selectedIndex].pid,
+            executionStart,
+            currentTime
+        );
 
         // Check whether the process has completed.
         if (remainingTime[selectedIndex] == 0)
@@ -149,5 +192,10 @@ SchedulingOutcome PreemptivePriorityScheduler2::schedule(
         }
     }
 
-    return {true, "", results};
+    return {
+        true,
+        "",
+        results,
+        executionTimeline
+    };
 }

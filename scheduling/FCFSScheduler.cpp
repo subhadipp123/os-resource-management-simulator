@@ -9,18 +9,18 @@ using namespace std;
 SchedulingOutcome FCFSScheduler::schedule(
     const vector<SchedulingProcess>& processes)
 {
-    // Validate input before running the scheduling algorithm.
+    // Validate input before scheduling.
     ValidationResult validation = validateProcesses(processes);
 
     if (!validation.isValid)
     {
-        return {false, validation.errorMessage, {}};
+        return {false, validation.errorMessage, {}, {}};
     }
 
     vector<SchedulingProcess> sortedProcesses = processes;
 
-    // Sort processes by arrival time.
-    // stable_sort preserves input order when arrival times are equal.
+    // Sort by arrival time.
+    // stable_sort preserves input order for equal arrival times.
     stable_sort(
         sortedProcesses.begin(),
         sortedProcesses.end(),
@@ -31,6 +31,7 @@ SchedulingOutcome FCFSScheduler::schedule(
     );
 
     vector<Result> results;
+    vector<ExecutionSegment> executionTimeline;
 
     int currentTime = 0;
 
@@ -42,7 +43,16 @@ SchedulingOutcome FCFSScheduler::schedule(
         result.arrivalTime = process.arrivalTime;
         result.burstTime = process.burstTime;
 
-        // CPU waits if the next process has not arrived yet.
+        // Record CPU idle time if the next process has not arrived.
+        if (currentTime < process.arrivalTime)
+        {
+            executionTimeline.push_back({
+                0,
+                currentTime,
+                process.arrivalTime
+            });
+        }
+
         result.startTime = max(currentTime, process.arrivalTime);
 
         result.completionTime =
@@ -57,10 +67,22 @@ SchedulingOutcome FCFSScheduler::schedule(
         result.responseTime =
             result.startTime - process.arrivalTime;
 
+        // Record this process's CPU execution interval.
+        executionTimeline.push_back({
+            process.pid,
+            result.startTime,
+            result.completionTime
+        });
+
         currentTime = result.completionTime;
 
         results.push_back(result);
     }
 
-    return {true, "", results};
+    return {
+        true,
+        "",
+        results,
+        executionTimeline
+    };
 }

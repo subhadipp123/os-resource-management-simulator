@@ -11,9 +11,9 @@ int main()
 {
     vector<SchedulingProcess> processes =
     {
-        {1, 0, 10},
-        {2, 2, 3},
-        {3, 4, 1}
+        {1, 0, 10, 0},
+        {2, 2, 3, 0},
+        {3, 4, 1, 0}
     };
 
     SRTFScheduler scheduler;
@@ -79,6 +79,23 @@ int main()
 
         cout << "Average Response Time: "
              << totalResponseTime / count << '\n';
+    }
+
+    // Display the complete CPU execution timeline.
+    cout << "\nExecution Timeline:\n";
+
+    for (const ExecutionSegment& segment :
+         outcome.executionTimeline)
+    {
+        if (segment.pid == 0)
+            cout << "IDLE: ";
+        else
+            cout << "P" << segment.pid << ": ";
+
+        cout << segment.startTime
+             << " - "
+             << segment.endTime
+             << '\n';
     }
 
     cout << "\n=====================================\n";

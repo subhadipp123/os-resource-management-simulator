@@ -9,18 +9,20 @@ using namespace std;
 SchedulingOutcome SJFScheduler::schedule(
     const vector<SchedulingProcess>& processes)
 {
-    // Validate input before running the scheduling algorithm.
+    // Validate input before scheduling.
     ValidationResult validation = validateProcesses(processes);
 
     if (!validation.isValid)
     {
-        return {false, validation.errorMessage, {}};
+        return {false, validation.errorMessage, {}, {}};
     }
 
     vector<Result> results;
+    vector<ExecutionSegment> executionTimeline;
 
     int n = static_cast<int>(processes.size());
     int currentTime = 0;
+
     vector<bool> completed(n, false);
 
     int completedCount = 0;
@@ -48,7 +50,7 @@ SchedulingOutcome SJFScheduler::schedule(
             }
         }
 
-        // If no process has arrived, advance to the next arrival.
+        // If no process is ready, advance to the next arrival.
         if (selectedIndex == -1)
         {
             int nextArrival = -1;
@@ -63,6 +65,16 @@ SchedulingOutcome SJFScheduler::schedule(
                         nextArrival = processes[i].arrivalTime;
                     }
                 }
+            }
+
+            // Record CPU idle interval.
+            if (nextArrival > currentTime)
+            {
+                executionTimeline.push_back({
+                    0,
+                    currentTime,
+                    nextArrival
+                });
             }
 
             currentTime = nextArrival;
@@ -92,6 +104,13 @@ SchedulingOutcome SJFScheduler::schedule(
         result.responseTime =
             result.startTime - result.arrivalTime;
 
+        // Record process execution interval.
+        executionTimeline.push_back({
+            process.pid,
+            result.startTime,
+            result.completionTime
+        });
+
         currentTime = result.completionTime;
 
         results.push_back(result);
@@ -100,5 +119,10 @@ SchedulingOutcome SJFScheduler::schedule(
         completedCount++;
     }
 
-    return {true, "", results};
+    return {
+        true,
+        "",
+        results,
+        executionTimeline
+    };
 }

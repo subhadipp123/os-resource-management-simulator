@@ -11,9 +11,9 @@ int main()
 {
     vector<SchedulingProcess> processes =
     {
-       {1, 3, 4, 2},
-       {2, 5, 2, 1},
-       {3, 6, 1, 3}
+        {1, 3, 4, 2},
+        {2, 5, 2, 1},
+        {3, 6, 1, 3}
     };
 
     PreemptivePriorityScheduler2 scheduler;
@@ -93,6 +93,23 @@ int main()
 
         cout << "Average Response Time: "
              << totalResponseTime / count << '\n';
+    }
+
+    // Display execution timeline.
+    cout << "\nExecution Timeline:\n";
+
+    for (const ExecutionSegment& segment :
+         outcome.executionTimeline)
+    {
+        if (segment.pid == 0)
+            cout << "IDLE: ";
+        else
+            cout << "P" << segment.pid << ": ";
+
+        cout << segment.startTime
+             << " - "
+             << segment.endTime
+             << '\n';
     }
 
     cout << "\n============================================\n";
