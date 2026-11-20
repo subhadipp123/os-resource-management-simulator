@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <vector>
 #include <iomanip>
@@ -17,8 +18,15 @@ int main()
 
     FCFSScheduler scheduler;
 
-    vector<FCFSResult> results =
-        scheduler.schedule(processes);
+    SchedulingOutcome outcome = scheduler.schedule(processes);
+
+    if (!outcome.isValid)
+    {
+        cout << "Scheduling error: " << outcome.errorMessage << '\n';
+        return 1;
+    }
+
+    const vector<Result>& results = outcome.results;
 
     double totalWaitingTime = 0;
     double totalTurnaroundTime = 0;
@@ -37,7 +45,7 @@ int main()
          << setw(10) << "RT"
          << '\n';
 
-    for (const FCFSResult& result : results)
+    for (const Result& result : results)
     {
         cout << left
              << setw(8) << result.pid

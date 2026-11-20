@@ -6,9 +6,10 @@ struct SchedulingProcess
     int pid;
     int arrivalTime;
     int burstTime;
+    int priority;
 };
 
-struct FCFSResult
+struct Result
 {
     int pid;
     int arrivalTime;

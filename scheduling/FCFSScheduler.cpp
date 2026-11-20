@@ -1,11 +1,22 @@
+
 #include <algorithm>
+
 #include "FCFSScheduler.h"
+#include "SchedulingValidator.h"
 
 using namespace std;
 
-vector<FCFSResult> FCFSScheduler::schedule(
+SchedulingOutcome FCFSScheduler::schedule(
     const vector<SchedulingProcess>& processes)
 {
+    // Validate input before running the scheduling algorithm.
+    ValidationResult validation = validateProcesses(processes);
+
+    if (!validation.isValid)
+    {
+        return {false, validation.errorMessage, {}};
+    }
+
     vector<SchedulingProcess> sortedProcesses = processes;
 
     // Sort processes by arrival time.
@@ -19,13 +30,13 @@ vector<FCFSResult> FCFSScheduler::schedule(
         }
     );
 
-    vector<FCFSResult> results;
+    vector<Result> results;
 
     int currentTime = 0;
 
     for (const SchedulingProcess& process : sortedProcesses)
     {
-        FCFSResult result;
+        Result result;
 
         result.pid = process.pid;
         result.arrivalTime = process.arrivalTime;
@@ -51,5 +62,5 @@ vector<FCFSResult> FCFSScheduler::schedule(
         results.push_back(result);
     }
 
-    return results;
+    return {true, "", results};
 }
