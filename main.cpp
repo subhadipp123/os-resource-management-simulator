@@ -36,7 +36,6 @@ int main()
         }
         else
         {
-            // Remove the newline left by cin >> choice.
             cin.ignore(
                 numeric_limits<streamsize>::max(),
                 '\n'
@@ -45,7 +44,7 @@ int main()
             handleChoice(choice);
         }
 
-    } while (choice != 3);
+    } while (choice != 4);
 
     return 0;
 }
