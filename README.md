@@ -1,8 +1,8 @@
 # OS Resource Management Simulator
 
-A modular, interactive **Operating System Resource Management Simulator** developed using **C++20**. This project demonstrates fundamental operating system concepts through process management, CPU scheduling, and performance analysis.
+A modular, interactive **Operating System Resource Management Simulator** developed using **C++20**. This project demonstrates fundamental operating system concepts through process management, CPU scheduling, performance analysis, and memory management.
 
-The simulator allows users to manage process lifecycles, execute different CPU scheduling algorithms, visualize execution timelines using Gantt charts, and compare scheduling performance using manual inputs or automatically generated workloads.
+The simulator allows users to manage process lifecycles, execute different CPU scheduling algorithms, visualize execution timelines using Gantt charts, compare scheduling performance, and simulate dynamic memory allocation using different allocation strategies.
 
 ## Table of Contents
 
@@ -10,9 +10,11 @@ The simulator allows users to manage process lifecycles, execute different CPU s
   - [1. Process Management](#1-process-management)
   - [2. CPU Scheduling](#2-cpu-scheduling)
   - [3. Performance Analysis](#3-performance-analysis)
+  - [4. Memory Management](#4-memory-management)
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
+- [Main Menu](#main-menu)
 - [Testing](#testing)
 - [Future Enhancements](#future-enhancements)
 - [Learning Objectives](#learning-objectives)
@@ -155,7 +157,6 @@ Using the same random seed and process count produces the same workload.
 | Maximum Execution Time | Highest measured scheduler computation time. |
 
 **Benchmark Measurement Methodology:**
-
 - All five algorithms receive the same generated process workload.
 - Each algorithm is executed repeatedly according to the configured repetition count.
 - `std::chrono::steady_clock` is used to measure actual scheduler execution time.
@@ -175,7 +176,66 @@ Throughput = Completed Processes / Simulated Makespan
 
 The simulated makespan is measured from time zero to the final process completion time, including any initial CPU idle interval.
 
-**Important:** Scheduling performance metrics describe the simulated CPU scheduling behavior, whereas execution time measures how long the C++ implementation takes to calculate a schedule on the host computer.
+**Important:** Scheduling performance metrics describe simulated CPU scheduling behavior, whereas execution time measures how long the C++ implementation takes to calculate a schedule on the host computer.
+
+### 4. Memory Management
+
+Simulates dynamic memory allocation and deallocation using variable-sized contiguous memory blocks.
+
+**Supported Allocation Algorithms:**
+
+| Algorithm | Description |
+|---|---|
+| First Fit | Selects the first free memory block large enough for the requested process. |
+| Best Fit | Selects the smallest available free block that can accommodate the request. |
+| Worst Fit | Selects the largest available free block that can accommodate the request. |
+
+**Memory Management Features:**
+- Initialize total memory capacity.
+- Allocate memory to processes.
+- Deallocate memory using Process IDs.
+- Select First Fit, Best Fit, or Worst Fit allocation strategies.
+- Split free memory blocks after allocation.
+- Merge adjacent free blocks after deallocation (coalescing).
+- Display the current memory map.
+- Track allocated and free memory.
+- Calculate memory utilization.
+- Identify the largest available free block.
+- Calculate external fragmentation.
+
+**Memory Block Representation:**
+
+Each memory block maintains:
+
+| Attribute | Description |
+|---|---|
+| Start Address | Starting address of the memory block. |
+| Size | Size of the memory block in KB. |
+| Allocation Status | Indicates whether the block is free or allocated. |
+| Process ID | Identifies the process occupying the block; free blocks use PID -1. |
+
+**Memory Statistics:**
+
+Memory Utilization:
+
+Memory Utilization = (Used Memory / Total Memory) × 100
+
+External Fragmentation:
+
+External Fragmentation = Total Free Memory − Largest Free Block
+
+External Fragmentation Percentage:
+
+External Fragmentation % = (External Fragmentation / Total Free Memory) × 100
+
+The external fragmentation percentage is defined as 0 when total free memory is zero.
+
+**Memory Allocation Behavior:**
+- A process receives one contiguous memory block.
+- A selected free block is split when its size exceeds the requested allocation.
+- Deallocated blocks are merged with adjacent free blocks.
+- Duplicate active Process IDs and invalid allocation requests are rejected.
+- Allocation fails when no individual free block is large enough.
 
 ---
 
@@ -242,11 +302,20 @@ OS-Resource-Management-Simulator/
 │   ├── PerformanceAnalysisUI.h
 │   └── PerformanceAnalysisUI.cpp
 │
+├── memory/
+│   ├── MemoryBlock.h
+│   ├── MemoryManager.h
+│   ├── MemoryManager.cpp
+│   ├── MemoryAllocationUI.h
+│   └── MemoryAllocationUI.cpp
+│
 ├── output/
 ├── screenshots/
 ├── .gitignore
 └── README.md
 ```
+
+Additional standalone test files are maintained in the project root and module directories.
 
 ## Getting Started
 
@@ -279,8 +348,29 @@ mkdir output
 Run the following command from the project root directory:
 
 ```powershell
-g++ -std=c++20 -Wall -Wextra -pedantic main.cpp menu.cpp process/Process.cpp process/ProcessManager.cpp process/ProcessManagementUI.cpp scheduling/FCFSScheduler.cpp scheduling/SJFScheduler.cpp scheduling/SRTFScheduler.cpp scheduling/PriorityScheduler1.cpp scheduling/PreemptivePriorityScheduler2.cpp scheduling/SchedulingValidator.cpp scheduling/GanttChart.cpp scheduling/CPUSchedulingUI.cpp performance/SchedulingBenchmark.cpp performance/WorkloadGenerator.cpp performance/SchedulingReport.cpp performance/ManualInput.cpp performance/PerformanceAnalysisUI.cpp -o output/simulator.exe
+g++ -std=c++20 -Wall -Wextra -pedantic main.cpp menu.cpp `
+process/Process.cpp `
+process/ProcessManager.cpp `
+process/ProcessManagementUI.cpp `
+scheduling/FCFSScheduler.cpp `
+scheduling/SJFScheduler.cpp `
+scheduling/SRTFScheduler.cpp `
+scheduling/PriorityScheduler1.cpp `
+scheduling/PreemptivePriorityScheduler2.cpp `
+scheduling/SchedulingValidator.cpp `
+scheduling/GanttChart.cpp `
+scheduling/CPUSchedulingUI.cpp `
+performance/SchedulingBenchmark.cpp `
+performance/WorkloadGenerator.cpp `
+performance/SchedulingReport.cpp `
+performance/ManualInput.cpp `
+performance/PerformanceAnalysisUI.cpp `
+memory/MemoryManager.cpp `
+memory/MemoryAllocationUI.cpp `
+-o output/simulator.exe
 ```
+
+**Note:** Standalone test source files containing their own `main()` functions should not be included in the application build command.
 
 ### Run the Simulator
 
@@ -290,7 +380,7 @@ g++ -std=c++20 -Wall -Wextra -pedantic main.cpp menu.cpp process/Process.cpp pro
 
 ## Main Menu
 
-The simulator currently provides three implemented modules:
+The simulator currently provides four implemented modules:
 
 ```text
 ========================================
@@ -300,7 +390,8 @@ The simulator currently provides three implemented modules:
 1. Process Management
 2. CPU Scheduling
 3. Performance Analysis
-4. Exit
+4. Memory Management
+5. Exit
 ```
 
 ## Testing
@@ -333,34 +424,52 @@ The implemented modules have been tested through individual component tests and 
 - Comparison report generation.
 - Integrated menu navigation.
 
+**Memory Management Testing:**
+- Memory initialization and block representation.
+- First Fit allocation and block splitting.
+- Best Fit allocation and block selection.
+- Worst Fit allocation and block selection.
+- Memory deallocation.
+- Adjacent free-block coalescing.
+- Memory utilization calculations.
+- External fragmentation calculations.
+- Largest free block calculation.
+- Duplicate PID validation.
+- Invalid PID and allocation-size validation.
+- Insufficient memory handling.
+- Memory Management UI and main-menu integration.
+
 ## Future Enhancements
 
-The following modules are planned but are not currently implemented:
+The following modules and improvements are planned but are not yet implemented.
 
-### 1. Memory Management
-- First Fit
-- Best Fit
-- Worst Fit
-- Memory allocation and deallocation.
-- Memory fragmentation analysis.
+### 1. Virtual Memory and Page Replacement
 
-### 2. Virtual Memory and Page Replacement
-- FIFO
-- LRU
-- Optimal Page Replacement
-- Page fault analysis.
+- Paging and virtual memory simulation.
+- Page and frame management.
+- Page table representation.
+- Page fault handling.
+- FIFO page replacement.
+- LRU page replacement.
+- Optimal page replacement.
+- Page fault comparison and analysis.
+- Belady's anomaly demonstration.
 
-### 3. Deadlock Management
+### 2. Deadlock Management
+
+- Deadlock fundamentals and resource allocation.
+- Resource Allocation Graph representation.
 - Banker's Algorithm.
 - Safe-state detection.
-- Resource allocation and request management.
 - Deadlock avoidance analysis.
 
-### 4. Additional Enhancements
+### 3. Additional Enhancements
+
 - Advanced performance visualizations.
-- Further algorithm optimization.
 - Expanded test coverage.
-- Additional system performance analysis.
+- Improved documentation.
+- Screenshots and sample execution demonstrations.
+- Further algorithm optimization.
 
 ## Learning Objectives
 
@@ -372,6 +481,8 @@ This project explores practical applications of:
 - Preemptive and non-preemptive scheduling.
 - Scheduling performance evaluation.
 - Algorithm execution-time analysis.
+- Contiguous memory allocation.
+- Memory fragmentation and coalescing.
 - Data structures and algorithms.
 - C++20 programming.
 - Modular software architecture.

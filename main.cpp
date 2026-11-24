@@ -44,7 +44,7 @@ int main()
             handleChoice(choice);
         }
 
-    } while (choice != 4);
+    } while (choice != 5);
 
     return 0;
 }
