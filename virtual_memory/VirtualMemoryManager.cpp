@@ -2,24 +2,24 @@
 #include "VirtualMemoryManager.h"
 
 #include <stdexcept>
+#include <cstddef>
 
 VirtualMemoryManager::VirtualMemoryManager(
     int totalPages,
     int totalFrames
 )
     : pageTable(totalPages),
-      frames(totalFrames),
+      frames(
+          totalFrames > 0
+              ? static_cast<std::size_t>(totalFrames)
+              : throw std::invalid_argument(
+                    "Total frames must be greater than zero."
+                )
+      ),
       logicalClock(0),
       pageFaults(0),
       pageHits(0)
 {
-    if (totalFrames <= 0)
-    {
-        throw std::invalid_argument(
-            "Total frames must be greater than zero."
-        );
-    }
-
     for (int i = 0; i < totalFrames; i++)
     {
         frames[i].frameNumber = i;
@@ -31,9 +31,7 @@ int VirtualMemoryManager::findFreeFrame() const
     for (int i = 0; i < static_cast<int>(frames.size()); i++)
     {
         if (!frames[i].occupied)
-        {
             return i;
-        }
     }
 
     return -1;
@@ -42,9 +40,7 @@ int VirtualMemoryManager::findFreeFrame() const
 PageAccessResult VirtualMemoryManager::accessPage(int pageNumber)
 {
     if (!pageTable.isValidPage(pageNumber))
-    {
         return PageAccessResult::INVALID_PAGE;
-    }
 
     logicalClock++;
 
@@ -64,9 +60,7 @@ PageAccessResult VirtualMemoryManager::accessPage(int pageNumber)
     int freeFrame = findFreeFrame();
 
     if (freeFrame == -1)
-    {
         return PageAccessResult::NO_FREE_FRAME;
-    }
 
     frames[freeFrame].pageNumber = pageNumber;
     frames[freeFrame].occupied = true;
@@ -79,6 +73,7 @@ PageAccessResult VirtualMemoryManager::accessPage(int pageNumber)
         frames[freeFrame].frameNumber = freeFrame;
 
         pageFaults--;
+
         return PageAccessResult::INVALID_PAGE;
     }
 
@@ -111,13 +106,9 @@ bool VirtualMemoryManager::replacePage(
         return false;
     }
 
-    // Remove the old page's mapping.
     if (!pageTable.unmapPage(oldPage))
-    {
         return false;
-    }
 
-    // Map the new page to the same physical frame.
     if (!pageTable.mapPage(pageNumber, victimFrame))
     {
         pageTable.mapPage(oldPage, victimFrame);
@@ -152,9 +143,7 @@ bool VirtualMemoryManager::unloadPage(int pageNumber)
     }
 
     if (!pageTable.unmapPage(pageNumber))
-    {
         return false;
-    }
 
     frames[frameNumber].pageNumber = -1;
     frames[frameNumber].occupied = false;
@@ -179,9 +168,7 @@ double VirtualMemoryManager::getPageFaultRate() const
     int totalReferences = pageFaults + pageHits;
 
     if (totalReferences == 0)
-    {
         return 0.0;
-    }
 
     return static_cast<double>(pageFaults) /
            totalReferences * 100.0;
@@ -192,9 +179,7 @@ double VirtualMemoryManager::getPageHitRatio() const
     int totalReferences = pageFaults + pageHits;
 
     if (totalReferences == 0)
-    {
         return 0.0;
-    }
 
     return static_cast<double>(pageHits) /
            totalReferences * 100.0;

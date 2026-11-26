@@ -1,11 +1,12 @@
-
 #include <iostream>
 
 #include "menu.h"
+
 #include "process/ProcessManagementUI.h"
 #include "scheduling/CPUSchedulingUI.h"
 #include "performance/PerformanceAnalysisUI.h"
 #include "memory/MemoryAllocationUI.h"
+#include "virtual_memory/VirtualMemoryUI.h"
 
 using namespace std;
 
@@ -19,7 +20,8 @@ void displayMenu()
     cout << "2. CPU Scheduling\n";
     cout << "3. Performance Analysis\n";
     cout << "4. Memory Management\n";
-    cout << "5. Exit\n";
+    cout << "5. Virtual Memory & Page Replacement\n";
+    cout << "6. Exit\n";
 }
 
 void handleChoice(int choice)
@@ -43,10 +45,14 @@ void handleChoice(int choice)
             break;
 
         case 5:
+            runVirtualMemoryMenu();
+            break;
+
+        case 6:
             cout << "Exiting the simulator. Goodbye!\n";
             break;
 
         default:
-            cout << "Invalid choice! Please select 1 to 5.\n";
+            cout << "Invalid choice! Please select 1 to 6.\n";
     }
 }

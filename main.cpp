@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <limits>
 
@@ -30,7 +29,8 @@ int main()
                 '\n'
             );
 
-            cout << "Invalid input! Please enter a number.\n";
+            cout
+                << "Invalid input! Please enter a number.\n";
 
             choice = 0;
         }
@@ -44,7 +44,7 @@ int main()
             handleChoice(choice);
         }
 
-    } while (choice != 5);
+    } while (choice != 6);
 
     return 0;
 }
