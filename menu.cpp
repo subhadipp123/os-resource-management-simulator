@@ -1,5 +1,5 @@
-#include <iostream>
 
+#include <iostream>
 #include "menu.h"
 
 #include "process/ProcessManagementUI.h"
@@ -7,6 +7,7 @@
 #include "performance/PerformanceAnalysisUI.h"
 #include "memory/MemoryAllocationUI.h"
 #include "virtual_memory/VirtualMemoryUI.h"
+#include "deadlock/DeadlockUI.h"
 
 using namespace std;
 
@@ -15,13 +16,13 @@ void displayMenu()
     cout << "\n========================================\n";
     cout << "     OS RESOURCE MANAGEMENT SIMULATOR\n";
     cout << "========================================\n";
-
     cout << "\n1. Process Management\n";
     cout << "2. CPU Scheduling\n";
     cout << "3. Performance Analysis\n";
     cout << "4. Memory Management\n";
     cout << "5. Virtual Memory & Page Replacement\n";
-    cout << "6. Exit\n";
+    cout << "6. Deadlock Management\n";
+    cout << "7. Exit\n";
 }
 
 void handleChoice(int choice)
@@ -49,10 +50,14 @@ void handleChoice(int choice)
             break;
 
         case 6:
+            runDeadlockManagement();
+            break;
+
+        case 7:
             cout << "Exiting the simulator. Goodbye!\n";
             break;
 
         default:
-            cout << "Invalid choice! Please select 1 to 6.\n";
+            cout << "Invalid choice! Please select 1 to 7.\n";
     }
 }

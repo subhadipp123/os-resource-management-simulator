@@ -4,7 +4,59 @@
 #include <algorithm>
 #include <functional>
 #include <cstddef>
+#include <limits>
 #include <vector>
+
+// --------------------------------------------------
+// HELPER: FIND GRAPH ELEMENTS
+// --------------------------------------------------
+
+namespace
+{
+    std::size_t findProcessIndex(
+        const std::vector<ProcessNode>& processes,
+        int processId)
+    {
+        for (std::size_t i = 0; i < processes.size(); i++)
+        {
+            if (processes[i].id == processId)
+                return i;
+        }
+
+        return processes.size();
+    }
+
+    std::size_t findResourceIndex(
+        const std::vector<ResourceNode>& resources,
+        int resourceId)
+    {
+        for (std::size_t i = 0; i < resources.size(); i++)
+        {
+            if (resources[i].id == resourceId)
+                return i;
+        }
+
+        return resources.size();
+    }
+
+    bool containsEdge(
+        const std::vector<GraphEdgeReference>& edges,
+        int processId,
+        int resourceId,
+        EdgeType type)
+    {
+        return std::any_of(
+            edges.begin(),
+            edges.end(),
+            [&](const GraphEdgeReference& edge)
+            {
+                return edge.processId == processId &&
+                       edge.resourceId == resourceId &&
+                       edge.type == type;
+            }
+        );
+    }
+}
 
 // --------------------------------------------------
 // SINGLE-INSTANCE DEADLOCK DETECTION
@@ -21,6 +73,8 @@ DetectionResult DeadlockDetector::detectSingleInstanceDeadlock(
 
     DetectionResult result{
         DetectionStatus::NoDeadlock,
+        {},
+        {},
         {}
     };
 
@@ -28,57 +82,66 @@ DetectionResult DeadlockDetector::detectSingleInstanceDeadlock(
         processCount
     );
 
-    auto findProcessIndex = [&](int processId)
-    {
-        for (std::size_t i = 0; i < processCount; i++)
-        {
-            if (processes[i].id == processId)
-                return i;
-        }
-
-        return processCount;
-    };
-
-    auto findResource = [&](int resourceId)
-    {
-        return std::find_if(
-            resources.begin(),
-            resources.end(),
-            [resourceId](const ResourceNode& resource)
-            {
-                return resource.id == resourceId;
-            }
-        );
-    };
-
-    // Reject participating resources with multiple instances.
+    // Check that all participating resources have one instance.
     for (const auto& edge : edges)
     {
-        auto resource = findResource(edge.resourceId);
+        std::size_t resourceIndex =
+            findResourceIndex(resources, edge.resourceId);
 
-        if (resource == resources.end())
-            continue;
+        std::size_t processIndex =
+            findProcessIndex(processes, edge.processId);
 
-        if (resource->totalInstances != 1)
+        if (resourceIndex == resources.size() ||
+            processIndex == processCount ||
+            edge.units <= 0)
+        {
+            result.status = DetectionStatus::InvalidGraph;
+            return result;
+        }
+
+        if (resources[resourceIndex].totalInstances != 1)
         {
             result.status =
                 DetectionStatus::UnsupportedMultipleInstances;
 
             return result;
         }
+
+        if (edge.type == EdgeType::Allocation &&
+            edge.units != 1)
+        {
+            result.status = DetectionStatus::InvalidGraph;
+            return result;
+        }
     }
 
-    // Convert RAG relationships into WFG relationships.
+    // Validate resource availability.
+    for (const auto& resource : resources)
+    {
+        if (resource.totalInstances != 1 ||
+            resource.availableInstances < 0 ||
+            resource.availableInstances > resource.totalInstances)
+        {
+            result.status = DetectionStatus::InvalidGraph;
+            return result;
+        }
+    }
+
+    // Convert Resource Allocation Graph relationships
+    // into Wait-For Graph relationships.
     for (const auto& requestEdge : edges)
     {
         if (requestEdge.type != EdgeType::Request)
             continue;
 
         std::size_t requestingProcess =
-            findProcessIndex(requestEdge.processId);
+            findProcessIndex(processes, requestEdge.processId);
 
         if (requestingProcess == processCount)
-            continue;
+        {
+            result.status = DetectionStatus::InvalidGraph;
+            return result;
+        }
 
         for (const auto& allocationEdge : edges)
         {
@@ -88,15 +151,27 @@ DetectionResult DeadlockDetector::detectSingleInstanceDeadlock(
             if (allocationEdge.resourceId != requestEdge.resourceId)
                 continue;
 
+            if (requestEdge.units != 1)
+            {
+                result.status = DetectionStatus::InvalidGraph;
+                return result;
+            }
+
             std::size_t holdingProcess =
-                findProcessIndex(allocationEdge.processId);
+                findProcessIndex(processes, allocationEdge.processId);
 
             if (holdingProcess == processCount)
-                continue;
+            {
+                result.status = DetectionStatus::InvalidGraph;
+                return result;
+            }
 
-            waitForGraph[requestingProcess].push_back(
-                holdingProcess
-            );
+            if (holdingProcess != requestingProcess)
+            {
+                waitForGraph[requestingProcess].push_back(
+                    holdingProcess
+                );
+            }
         }
     }
 
@@ -120,7 +195,7 @@ DetectionResult DeadlockDetector::detectSingleInstanceDeadlock(
         for (std::size_t next : waitForGraph[current])
         {
             if (cycleFound)
-                return;
+                break;
 
             if (state[next] == 0)
             {
@@ -188,86 +263,78 @@ DetectionResult DeadlockDetector::detectMultipleInstanceDeadlock(
 
     DetectionResult result{
         DetectionStatus::NoDeadlock,
+        {},
+        {},
         {}
     };
 
-    // Work initially contains the available instances.
+    // Work initially contains available resource instances.
     std::vector<int> work(resourceCount, 0);
 
-    // Allocation[i][j] = instances of resource j held by process i.
+    // Allocation[i][j] = resource instances held by process i.
     std::vector<std::vector<int>> allocation(
         processCount,
         std::vector<int>(resourceCount, 0)
     );
 
-    // Request[i][j] = instances of resource j requested by process i.
+    // Request[i][j] = resource instances requested by process i.
     std::vector<std::vector<int>> request(
         processCount,
         std::vector<int>(resourceCount, 0)
     );
 
-    // Build Work from Available.
+    // Validate resources and initialize Work.
     for (std::size_t j = 0; j < resourceCount; j++)
     {
-        work[j] = resources[j].availableInstances;
-
-        if (work[j] < 0 ||
-            work[j] > resources[j].totalInstances)
+        if (resources[j].totalInstances <= 0 ||
+            resources[j].availableInstances < 0 ||
+            resources[j].availableInstances >
+                resources[j].totalInstances)
         {
+            result.status = DetectionStatus::InvalidGraph;
             return result;
         }
+
+        work[j] = resources[j].availableInstances;
     }
 
-    // Map graph edges into the matrices.
+    // Map graph edges into Allocation and Request matrices.
     for (const auto& edge : edges)
     {
-        auto processIt = std::find_if(
-            processes.begin(),
-            processes.end(),
-            [&](const ProcessNode& process)
-            {
-                return process.id == edge.processId;
-            }
-        );
+        std::size_t i =
+            findProcessIndex(processes, edge.processId);
 
-        auto resourceIt = std::find_if(
-            resources.begin(),
-            resources.end(),
-            [&](const ResourceNode& resource)
-            {
-                return resource.id == edge.resourceId;
-            }
-        );
+        std::size_t j =
+            findResourceIndex(resources, edge.resourceId);
 
-        if (processIt == processes.end() ||
-            resourceIt == resources.end() ||
+        if (i == processCount ||
+            j == resourceCount ||
             edge.units <= 0)
         {
+            result.status = DetectionStatus::InvalidGraph;
             return result;
         }
 
-        std::size_t i = static_cast<std::size_t>(
-            std::distance(processes.begin(), processIt)
-        );
+        int& target =
+            (edge.type == EdgeType::Allocation)
+                ? allocation[i][j]
+                : request[i][j];
 
-        std::size_t j = static_cast<std::size_t>(
-            std::distance(resources.begin(), resourceIt)
-        );
+        // Prevent integer overflow.
+        if (target >
+            std::numeric_limits<int>::max() - edge.units)
+        {
+            result.status = DetectionStatus::InvalidGraph;
+            return result;
+        }
 
-        if (edge.type == EdgeType::Allocation)
-        {
-            allocation[i][j] += edge.units;
-        }
-        else
-        {
-            request[i][j] += edge.units;
-        }
+        target += edge.units;
     }
 
     // Validate resource accounting.
     for (std::size_t j = 0; j < resourceCount; j++)
     {
-        int allocatedTotal = 0;
+        long long allocatedTotal = 0;
 
         for (std::size_t i = 0; i < processCount; i++)
         {
@@ -277,6 +344,7 @@ DetectionResult DeadlockDetector::detectMultipleInstanceDeadlock(
         if (allocatedTotal + work[j] !=
             resources[j].totalInstances)
         {
+            result.status = DetectionStatus::InvalidGraph;
             return result;
         }
     }
@@ -284,8 +352,7 @@ DetectionResult DeadlockDetector::detectMultipleInstanceDeadlock(
     // Finish[i] indicates whether process i can finish.
     std::vector<bool> finish(processCount, false);
 
-    // Processes holding no resources are initially finished
-    // according to the standard detection algorithm.
+    // Processes holding no resources are initially finished.
     for (std::size_t i = 0; i < processCount; i++)
     {
         bool holdsResource = false;
@@ -339,7 +406,7 @@ DetectionResult DeadlockDetector::detectMultipleInstanceDeadlock(
         }
     }
 
-    // Remaining unfinished processes are deadlocked.
+    // Identify processes remaining unfinished.
     for (std::size_t i = 0; i < processCount; i++)
     {
         if (!finish[i])
@@ -350,9 +417,64 @@ DetectionResult DeadlockDetector::detectMultipleInstanceDeadlock(
         }
     }
 
-    if (!result.deadlockedProcessIds.empty())
+    if (result.deadlockedProcessIds.empty())
     {
-        result.status = DetectionStatus::DeadlockDetected;
+        result.status = DetectionStatus::NoDeadlock;
+        return result;
+    }
+
+    result.status = DetectionStatus::DeadlockDetected;
+
+    // Identify requests that remain blocked.
+    for (std::size_t i = 0; i < processCount; i++)
+    {
+        if (finish[i])
+            continue;
+
+        for (std::size_t j = 0; j < resourceCount; j++)
+        {
+            if (request[i][j] > work[j])
+            {
+                if (!containsEdge(
+                    result.blockedRequestEdges,
+                    processes[i].id,
+                    resources[j].id,
+                    EdgeType::Request))
+                {
+                    result.blockedRequestEdges.push_back({
+                        processes[i].id,
+                        resources[j].id,
+                        EdgeType::Request
+                    });
+                }
+
+                // Identify allocations of this resource
+                // held by unfinished processes.
+                for (std::size_t holder = 0;
+                     holder < processCount;
+                     holder++)
+                {
+                    if (finish[holder] ||
+                        allocation[holder][j] == 0)
+                    {
+                        continue;
+                    }
+
+                    if (!containsEdge(
+                        result.blockingAllocationEdges,
+                        processes[holder].id,
+                        resources[j].id,
+                        EdgeType::Allocation))
+                    {
+                        result.blockingAllocationEdges.push_back({
+                            processes[holder].id,
+                            resources[j].id,
+                            EdgeType::Allocation
+                        });
+                    }
+                }
+            }
+        }
     }
 
     return result;

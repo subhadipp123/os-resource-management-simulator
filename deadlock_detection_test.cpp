@@ -8,7 +8,6 @@ void printResult(const DetectionResult& result)
     if (result.status == DetectionStatus::DeadlockDetected)
     {
         std::cout << "\nDEADLOCK DETECTED!\n";
-
         std::cout << "Deadlocked processes: ";
 
         for (int processId : result.deadlockedProcessIds)
@@ -22,11 +21,14 @@ void printResult(const DetectionResult& result)
     {
         std::cout << "\nNO DEADLOCK DETECTED.\n";
     }
+    else if (result.status ==
+             DetectionStatus::UnsupportedMultipleInstances)
+    {
+        std::cout << "\nUNSUPPORTED: Multiple-instance resource found.\n";
+    }
     else
     {
-        std::cout
-            << "\nUNSUPPORTED: A resource with multiple instances "
-            << "participates in the graph.\n";
+        std::cout << "\nINVALID GRAPH.\n";
     }
 }
 
@@ -34,7 +36,7 @@ int main()
 {
     std::cout << "===== DEADLOCK DETECTION TEST =====\n";
 
-    // TEST 1: Deadlock scenario
+    // TEST 1: Circular wait scenario
 
     ResourceAllocationGraph graph;
 
@@ -44,7 +46,6 @@ int main()
 
     graph.addResource(0, 1);
     graph.addResource(1, 1);
-    graph.addResource(2, 3);
 
     graph.addAllocation(0, 0);
     graph.addAllocation(1, 1);

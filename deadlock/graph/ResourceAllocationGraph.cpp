@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <limits>
 
 // Find a process by ID
 static auto findProcess(
@@ -100,7 +101,7 @@ bool ResourceAllocationGraph::addRequest(
 
     if (existingEdge != edges.end())
     {
-        if (existingEdge->units > 
+        if (existingEdge->units >
             std::numeric_limits<int>::max() - units)
         {
             return false;

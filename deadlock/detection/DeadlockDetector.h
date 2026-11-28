@@ -10,14 +10,31 @@ enum class DetectionStatus
 {
     NoDeadlock,
     DeadlockDetected,
-    UnsupportedMultipleInstances
+    UnsupportedMultipleInstances,
+    InvalidGraph
+};
+
+// Identifies a specific edge in the Resource Allocation Graph.
+struct GraphEdgeReference
+{
+    int processId;
+    int resourceId;
+    EdgeType type;
 };
 
 struct DetectionResult
 {
     DetectionStatus status;
 
+    // Processes identified as deadlocked.
     std::vector<int> deadlockedProcessIds;
+
+    // Requests that remain blocked.
+    std::vector<GraphEdgeReference> blockedRequestEdges;
+
+    // Allocations held by unfinished processes
+    // for resources involved in blocked requests.
+    std::vector<GraphEdgeReference> blockingAllocationEdges;
 };
 
 class DeadlockDetector

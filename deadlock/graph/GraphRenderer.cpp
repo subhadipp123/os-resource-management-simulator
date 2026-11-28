@@ -13,7 +13,10 @@ GraphRenderer::GraphRenderer(
         sf::VideoMode({1200, 800}),
         "OS Resource Management Simulator - Deadlock Graph"
     ),
-      graph(graph)
+      graph(graph),
+      detectionResult(
+          DeadlockDetector::detectMultipleInstanceDeadlock(graph)
+      )
 {
     window.setFramerateLimit(60);
 
@@ -23,7 +26,15 @@ GraphRenderer::GraphRenderer(
     }
 }
 
-// Draw text at a specified position
+bool GraphRenderer::isDeadlockedProcess(int processId) const
+{
+    return std::find(
+        detectionResult.deadlockedProcessIds.begin(),
+        detectionResult.deadlockedProcessIds.end(),
+        processId
+    ) != detectionResult.deadlockedProcessIds.end();
+}
+
 void GraphRenderer::drawText(
     const std::string& content,
     unsigned int size,
@@ -39,18 +50,26 @@ void GraphRenderer::drawText(
     window.draw(text);
 }
 
-// Draw a process as a blue circle
 void GraphRenderer::drawProcess(
     float x,
     float y,
-    const std::string& label)
+    const std::string& label,
+    bool deadlocked)
 {
     sf::CircleShape process(40.f);
 
-    process.setFillColor(sf::Color(50, 120, 220));
-    process.setOutlineThickness(3.f);
-    process.setOutlineColor(sf::Color::White);
+    if (deadlocked)
+    {
+        process.setFillColor(sf::Color(190, 45, 55));
+        process.setOutlineColor(sf::Color(255, 100, 100));
+    }
+    else
+    {
+        process.setFillColor(sf::Color(50, 120, 220));
+        process.setOutlineColor(sf::Color::White);
+    }
 
+    process.setOutlineThickness(3.f);
     process.setPosition({x - 40.f, y - 40.f});
 
     window.draw(process);
@@ -71,7 +90,6 @@ void GraphRenderer::drawProcess(
     window.draw(text);
 }
 
-// Draw a resource and distinguish allocated/free instances
 void GraphRenderer::drawResource(
     float x,
     float y,
@@ -95,7 +113,6 @@ void GraphRenderer::drawResource(
 
     window.draw(resource);
 
-    // Resource name
     sf::Text name(font, label, 22);
 
     name.setFillColor(sf::Color::White);
@@ -111,7 +128,6 @@ void GraphRenderer::drawResource(
 
     window.draw(name);
 
-    // Availability information
     sf::Text availability(
         font,
         "Free: " +
@@ -137,7 +153,6 @@ void GraphRenderer::drawResource(
 
     window.draw(availability);
 
-    // Draw resource instance dots
     int visibleDots = std::min(totalInstances, 8);
 
     if (visibleDots <= 0)
@@ -157,12 +172,10 @@ void GraphRenderer::drawResource(
 
         if (i < allocatedInstances)
         {
-            // Orange = allocated instance
             dot.setFillColor(sf::Color(255, 170, 40));
         }
         else
         {
-            // White = available instance
             dot.setFillColor(sf::Color::White);
         }
 
@@ -174,7 +187,6 @@ void GraphRenderer::drawResource(
         window.draw(dot);
     }
 
-    // Indicate that more than eight instances exist
     if (totalInstances > 8)
     {
         drawText(
@@ -187,7 +199,6 @@ void GraphRenderer::drawResource(
     }
 }
 
-// Draw a directional arrow
 void GraphRenderer::drawArrow(
     sf::Vector2f start,
     sf::Vector2f end,
@@ -206,7 +217,6 @@ void GraphRenderer::drawArrow(
 
     sf::Vector2f perpendicular(-uy, ux);
 
-    // Arrow line
     sf::RectangleShape line({length - 14.f, 3.f});
 
     line.setFillColor(color);
@@ -220,7 +230,6 @@ void GraphRenderer::drawArrow(
 
     window.draw(line);
 
-    // Arrowhead
     sf::Vector2f base(
         end.x - ux * 14.f,
         end.y - uy * 14.f
@@ -251,7 +260,72 @@ void GraphRenderer::drawArrow(
     window.draw(arrowHead);
 }
 
-// Draw graph statistics
+void GraphRenderer::drawEdgeLabel(
+    sf::Vector2f start,
+    sf::Vector2f end,
+    const std::string& label,
+    sf::Color color)
+{
+    float dx = end.x - start.x;
+    float dy = end.y - start.y;
+
+    float length = std::sqrt(dx * dx + dy * dy);
+
+    if (length < 1.f)
+        return;
+
+    constexpr float positionRatio = 0.35f;
+
+    sf::Vector2f position(
+        start.x + dx * positionRatio,
+        start.y + dy * positionRatio
+    );
+
+    sf::Vector2f perpendicular(
+        -dy / length,
+        dx / length
+    );
+
+    float side =
+        (color == sf::Color(255, 120, 120)) ? -1.f : 1.f;
+
+    constexpr float offset = 16.f;
+
+    sf::Vector2f labelPosition(
+        position.x + perpendicular.x * offset * side,
+        position.y + perpendicular.y * offset * side
+    );
+
+    sf::Text text(font, label, 14);
+
+    text.setFillColor(color);
+
+    sf::FloatRect bounds = text.getLocalBounds();
+
+    text.setOrigin({
+        bounds.position.x + bounds.size.x / 2.f,
+        bounds.position.y + bounds.size.y / 2.f
+    });
+
+    text.setPosition(labelPosition);
+
+    sf::RectangleShape background({
+        bounds.size.x + 12.f,
+        bounds.size.y + 8.f
+    });
+
+    background.setOrigin({
+        (bounds.size.x + 12.f) / 2.f,
+        (bounds.size.y + 8.f) / 2.f
+    });
+
+    background.setPosition(labelPosition);
+    background.setFillColor(sf::Color(25, 30, 40));
+
+    window.draw(background);
+    window.draw(text);
+}
+
 void GraphRenderer::drawInfoPanel()
 {
     const auto& processes = graph.getProcesses();
@@ -267,7 +341,7 @@ void GraphRenderer::drawInfoPanel()
         availableInstances += resource.availableInstances;
     }
 
-    sf::RectangleShape panel({510.f, 115.f});
+    sf::RectangleShape panel({510.f, 165.f});
 
     panel.setPosition({20.f, 15.f});
     panel.setFillColor(sf::Color(35, 43, 57));
@@ -320,20 +394,77 @@ void GraphRenderer::drawInfoPanel()
         88.f
     );
 
-    // Detection is not connected yet.
-    drawText(
-        "Deadlock Status: NOT ANALYZED",
-        17,
-        sf::Color(255, 190, 60),
-        600.f,
-        85.f
-    );
+    if (detectionResult.status == DetectionStatus::DeadlockDetected)
+    {
+        drawText(
+            "DEADLOCK DETECTED!",
+            20,
+            sf::Color(255, 80, 80),
+            38.f,
+            115.f
+        );
+
+        std::string names = "Processes: ";
+
+        for (int id : detectionResult.deadlockedProcessIds)
+        {
+            auto it = std::find_if(
+                processes.begin(),
+                processes.end(),
+                [id](const ProcessNode& process)
+                {
+                    return process.id == id;
+                }
+            );
+
+            if (it != processes.end())
+                names += it->name + " ";
+        }
+
+        drawText(
+            names,
+            15,
+            sf::Color(255, 160, 160),
+            270.f,
+            120.f
+        );
+    }
+    else if (detectionResult.status == DetectionStatus::NoDeadlock)
+    {
+        drawText(
+            "NO DEADLOCK DETECTED",
+            20,
+            sf::Color(70, 230, 130),
+            38.f,
+            120.f
+        );
+    }
+    else if (detectionResult.status ==
+             DetectionStatus::InvalidGraph)
+    {
+        drawText(
+            "INVALID RESOURCE GRAPH",
+            19,
+            sf::Color(255, 190, 60),
+            38.f,
+            120.f
+        );
+    }
+    else
+    {
+        drawText(
+            "DETECTION UNSUPPORTED",
+            19,
+            sf::Color(255, 190, 60),
+            38.f,
+            120.f
+        );
+    }
 }
 
-// Draw graph legend
 void GraphRenderer::drawLegend()
 {
-    sf::RectangleShape panel({260.f, 115.f});
+    sf::RectangleShape panel({260.f, 145.f});
 
     panel.setPosition({920.f, 15.f});
     panel.setFillColor(sf::Color(35, 43, 57));
@@ -350,7 +481,6 @@ void GraphRenderer::drawLegend()
         25.f
     );
 
-    // Request
     sf::RectangleShape requestLine({25.f, 3.f});
     requestLine.setPosition({940.f, 57.f});
     requestLine.setFillColor(sf::Color(255, 70, 70));
@@ -365,7 +495,6 @@ void GraphRenderer::drawLegend()
         48.f
     );
 
-    // Allocation
     sf::RectangleShape allocationLine({25.f, 3.f});
     allocationLine.setPosition({940.f, 80.f});
     allocationLine.setFillColor(sf::Color(50, 220, 120));
@@ -380,7 +509,6 @@ void GraphRenderer::drawLegend()
         71.f
     );
 
-    // Allocated instance
     sf::CircleShape allocatedDot(5.f);
     allocatedDot.setPosition({940.f, 96.f});
     allocatedDot.setFillColor(sf::Color(255, 170, 40));
@@ -395,7 +523,6 @@ void GraphRenderer::drawLegend()
         90.f
     );
 
-    // Available instance
     sf::CircleShape availableDot(5.f);
     availableDot.setPosition({1080.f, 96.f});
     availableDot.setFillColor(sf::Color::White);
@@ -409,20 +536,30 @@ void GraphRenderer::drawLegend()
         1095.f,
         90.f
     );
+
+    sf::CircleShape deadlockDot(7.f);
+    deadlockDot.setPosition({940.f, 120.f});
+    deadlockDot.setFillColor(sf::Color(190, 45, 55));
+
+    window.draw(deadlockDot);
+
+    drawText(
+        "Deadlocked Process",
+        14,
+        sf::Color::White,
+        960.f,
+        114.f
+    );
 }
 
-// Main rendering loop
 void GraphRenderer::run()
 {
     while (window.isOpen())
     {
-        // Handle events
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
-            {
                 window.close();
-            }
         }
 
         window.clear(sf::Color(25, 30, 40));
@@ -431,19 +568,13 @@ void GraphRenderer::run()
         const auto& resources = graph.getResources();
         const auto& edges = graph.getEdges();
 
-        float width = static_cast<float>(
-            window.getSize().x
-        );
-
-        float height = static_cast<float>(
-            window.getSize().y
-        );
+        float width = static_cast<float>(window.getSize().x);
+        float height = static_cast<float>(window.getSize().y);
 
         float processX = width * 0.20f;
         float resourceX = width * 0.75f;
 
-        // Reserve space for information panels
-        constexpr float topMargin = 190.f;
+        constexpr float topMargin = 220.f;
         constexpr float bottomMargin = 45.f;
 
         auto getY = [
@@ -466,7 +597,34 @@ void GraphRenderer::run()
                 static_cast<float>(count + 1);
         };
 
-        // Draw edges
+        // Check whether a graph edge is identified
+        // by the deadlock detector as a blocking relationship.
+        auto isBlockingEdge = [&](const GraphEdge& edge)
+        {
+            auto matches = [&](const GraphEdgeReference& reference)
+            {
+                return reference.processId == edge.processId &&
+                       reference.resourceId == edge.resourceId &&
+                       reference.type == edge.type;
+            };
+
+            if (edge.type == EdgeType::Request)
+            {
+                return std::any_of(
+                    detectionResult.blockedRequestEdges.begin(),
+                    detectionResult.blockedRequestEdges.end(),
+                    matches
+                );
+            }
+
+            return std::any_of(
+                detectionResult.blockingAllocationEdges.begin(),
+                detectionResult.blockingAllocationEdges.end(),
+                matches
+            );
+        };
+
+        // Draw edges and quantity labels.
         for (const auto& edge : edges)
         {
             auto processIt = std::find_if(
@@ -513,35 +671,79 @@ void GraphRenderer::run()
                 resources.size()
             );
 
+            bool blocking = isBlockingEdge(edge);
+
+            sf::Color edgeColor;
+
+            if (blocking)
+            {
+                edgeColor = sf::Color(255, 60, 60);
+            }
+            else if (edge.type == EdgeType::Request)
+            {
+                edgeColor = sf::Color(255, 70, 70);
+            }
+            else
+            {
+                edgeColor = sf::Color(50, 220, 120);
+            }
+
             if (edge.type == EdgeType::Request)
             {
-                drawArrow(
-                    {processX + 42.f, processY},
-                    {resourceX - 87.f, resourceY},
-                    sf::Color(255, 70, 70)
+                sf::Vector2f start(
+                    processX + 42.f,
+                    processY
+                );
+
+                sf::Vector2f end(
+                    resourceX - 87.f,
+                    resourceY
+                );
+
+                drawArrow(start, end, edgeColor);
+
+                drawEdgeLabel(
+                    start,
+                    end,
+                    "Request: " + std::to_string(edge.units),
+                    sf::Color(255, 120, 120)
                 );
             }
             else
             {
-                drawArrow(
-                    {resourceX - 87.f, resourceY},
-                    {processX + 42.f, processY},
-                    sf::Color(50, 220, 120)
+                sf::Vector2f start(
+                    resourceX - 87.f,
+                    resourceY
+                );
+
+                sf::Vector2f end(
+                    processX + 42.f,
+                    processY
+                );
+
+                drawArrow(start, end, edgeColor);
+
+                drawEdgeLabel(
+                    start,
+                    end,
+                    "Allocation: " + std::to_string(edge.units),
+                    sf::Color(100, 240, 150)
                 );
             }
         }
 
-        // Draw processes
+        // Draw processes.
         for (std::size_t i = 0; i < processes.size(); i++)
         {
             drawProcess(
                 processX,
                 getY(i, processes.size()),
-                processes[i].name
+                processes[i].name,
+                isDeadlockedProcess(processes[i].id)
             );
         }
 
-        // Draw resources
+        // Draw resources.
         for (std::size_t i = 0; i < resources.size(); i++)
         {
             drawResource(
@@ -553,7 +755,6 @@ void GraphRenderer::run()
             );
         }
 
-        // Draw panels on top
         drawInfoPanel();
         drawLegend();
 
